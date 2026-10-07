@@ -176,7 +176,9 @@ describe('status line ownership and recovery', () => {
 
   it('recognizes safely quoted renderer paths containing shell operators', () => {
     process.env['STATUSCRAFT_CONFIG_DIR'] = path.join(sandbox, 'config&other;(literal)');
-    put(paths.claudeSettingsFile(), { statusLine: { type: 'command', command: `"${process.execPath}" "${paths.renderScript()}"` } });
+    // The installer normalizes Windows paths to forward slashes before quoting.
+    const shellPath = (value: string) => process.platform === 'win32' ? value.replace(/\\/g, '/') : value;
+    put(paths.claudeSettingsFile(), { statusLine: { type: 'command', command: `"${shellPath(process.execPath)}" "${shellPath(paths.renderScript())}"` } });
     expect(getInstallState().ours).toBe(true);
     uninstall();
     expect(readJson(paths.claudeSettingsFile()).value).toEqual({});
