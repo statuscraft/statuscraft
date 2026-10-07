@@ -13,6 +13,7 @@ export interface AlignmentInfo {
   enabled: boolean;
 }
 
+// Nord, Dracula, Catppuccin and Gruvbox come from ccstatusline (MIT, Copyright (c) 2025 Matthew Breedlove): see LICENSE
 export const POWERLINE_THEMES: Record<string, PowerlineTheme> = {
   'custom': {
     name: 'Custom',

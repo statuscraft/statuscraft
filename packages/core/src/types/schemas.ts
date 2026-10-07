@@ -6,6 +6,8 @@ export const ThresholdSchema = z.object({
   tone: z.enum(['warn', 'danger']),
 });
 
+// The widget, powerline and settings fields follow ccstatusline's format
+// (MIT, Copyright (c) 2025 Matthew Breedlove): see LICENSE
 export const WidgetConfigSchema = z.object({
   id: z.string(),
   type: z.string().min(1),
