@@ -120,6 +120,27 @@ describe('custom commands', () => {
     expect(alive(pid)).toBe(false);
   });
 
+  it.skipIf(process.platform !== 'win32')('stops the launched process tree on Windows when a command times out', async () => {
+    const pidFile = path.join(sandbox, 'child-pid');
+    const script = path.join(sandbox, 'command.cjs');
+    fs.writeFileSync(script, `const { spawn } = require('node:child_process');
+const fs = require('node:fs');
+const child = spawn(process.execPath, ['-e', 'setTimeout(() => {}, 30000)'], { stdio: 'ignore' });
+fs.writeFileSync(${JSON.stringify(pidFile)}, String(child.pid));
+setTimeout(() => {}, 30000);`);
+    let pid: number | undefined;
+    try {
+      const result = await runCommands([widget(`"${process.execPath}" "${script}"`, 1500)], { stdin: '{}' });
+      expect(result['cmd']).toBeNull();
+      pid = Number(fs.readFileSync(pidFile, 'utf8'));
+      const deadline = Date.now() + 2000;
+      while (alive(pid) && Date.now() < deadline) await new Promise((resolve) => setTimeout(resolve, 50));
+      expect(alive(pid)).toBe(false);
+    } finally {
+      if (pid && alive(pid)) process.kill(pid, 'SIGKILL');
+    }
+  });
+
   it.skipIf(process.platform === 'win32')('keeps the start of a long output', async () => {
     const result = await runCommands([widget('echo first; yes more | head -n 5000')], { stdin: '{}' });
     expect(result['cmd']?.split('\n')[0]).toBe('first');
