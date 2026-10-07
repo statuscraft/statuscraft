@@ -18,9 +18,16 @@ jobs:
           bun-version-file: .bun-version
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           registry-url: https://registry.npmjs.org
+      # Trusted publishing requires npm >=11.5.1 and Node >=22.14.0.
+      - run: npm install --global npm@11.15.0
+      - name: Check the release tag matches the package version
+        run: |
+          node -e "const p=require('./packages/cli/package.json'); if (process.env.GITHUB_REF_NAME !== 'v'+p.version) throw new Error('Release tag does not match package version')"
       - run: bun install --frozen-lockfile
+      - run: bun run lint
+      - run: bun run typecheck
       - run: bun run test
       - run: bun run build
       - name: Publish statuscraft to npm
@@ -28,9 +35,14 @@ jobs:
         # workspace:* is only a build-time link: core is bundled into dist/
         run: |
           node -e "const p=require('./package.json'); delete p.dependencies; delete p.devDependencies; require('fs').writeFileSync('package.json', JSON.stringify(p, null, 2))"
-          npm publish --access public --provenance
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          version=$(node -p "require('./package.json').version")
+          published=$(npm view "statuscraft@$version" version --json 2>/dev/null || true)
+          if [ "$published" = "\"$version\"" ]; then
+            echo "statuscraft@$version is already published; completing the GitHub release."
+          else
+            npm publish --access public --provenance
+          fi
+        # npm authenticates with this workflow's OIDC identity; no persistent token.
       - uses: softprops/action-gh-release@v2
         with:
           generate_release_notes: true
