@@ -1,0 +1,14 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "jsx": "react-jsx",
+    "lib": ["DOM", "DOM.Iterable", "ES2023"],
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["./src/*"],
+      "@statuscraft/core": ["../core/src/index.ts"]
+    }
+  },
+  "include": ["src/**/*", "vite.config.ts", "tailwind.config.ts"]
+}

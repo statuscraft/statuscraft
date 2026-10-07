@@ -1,0 +1,37 @@
+{
+  "name": "statuscraft-monorepo",
+  "private": true,
+  "type": "module",
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "bun run --filter @statuscraft/editor dev & bun run --filter statuscraft dev",
+    "build": "bun run --filter @statuscraft/editor build && bun run --filter statuscraft build",
+    "build:plugin": "bun run packages/plugin/scripts/build.ts",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "test:plugin": "claude plugin test packages/plugin",
+    "test:e2e": "playwright test",
+    "typecheck": "tsc -p packages/core && tsc -p packages/cli && tsc -p packages/editor",
+    "lint": "eslint packages",
+    "docs": "bun run scripts/generate-docs.ts"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9",
+    "@playwright/test": "^1.40",
+    "@types/node": "^22",
+    "@typescript-eslint/eslint-plugin": "^8",
+    "@typescript-eslint/parser": "^8",
+    "@vitest/coverage-v8": "^2.0",
+    "eslint": "^9",
+    "globals": "^15",
+    "typescript": "^5.4",
+    "vitest": "^2.0",
+    "zod-to-json-schema": "^3.23"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

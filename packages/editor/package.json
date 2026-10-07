@@ -1,0 +1,34 @@
+{
+  "name": "@statuscraft/editor",
+  "version": "1.0.0",
+  "private": true,
+  "description": "The StatusCraft brick editor: drag-and-drop status line builder for Claude Code.",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "lint": "eslint src",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@dnd-kit/core": "^6.0",
+    "@dnd-kit/sortable": "^8.0",
+    "@dnd-kit/utilities": "^3.0",
+    "@statuscraft/core": "workspace:*",
+    "clsx": "^2.0",
+    "react": "^19.0",
+    "react-dom": "^19.0",
+    "zustand": "^4.5"
+  },
+  "devDependencies": {
+    "@types/react": "^19.0",
+    "@types/react-dom": "^19.0",
+    "@vitejs/plugin-react": "^4.0",
+    "autoprefixer": "^10.4.23",
+    "postcss": "^8.5.6",
+    "tailwindcss": "3",
+    "vite": "^5.4"
+  },
+  "license": "MIT"
+}

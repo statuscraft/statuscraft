@@ -1,0 +1,146 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: light;
+}
+
+body {
+  @apply bg-cream-100 font-sans text-ink-800 antialiased;
+  background-image: radial-gradient(circle at 12px 12px, rgba(43, 36, 32, 0.045) 5px, transparent 5.5px);
+  background-size: 24px 24px;
+}
+
+@layer components {
+  .brick {
+    --brick: #e53935;
+    --brick-text: #fff;
+    position: relative;
+    margin-top: 7px;
+    border-radius: 7px;
+    background: var(--brick);
+    color: var(--brick-text);
+    box-shadow:
+      inset 0 -5px 0 rgba(0, 0, 0, 0.2),
+      inset 0 2px 0 rgba(255, 255, 255, 0.35),
+      0 3px 0 rgba(43, 36, 32, 0.18),
+      0 6px 14px rgba(43, 36, 32, 0.12);
+    transition: transform 120ms ease, box-shadow 120ms ease;
+  }
+  .brick:hover {
+    transform: translateY(-2px);
+  }
+  .brick-selected {
+    outline: 3px solid #2b2420;
+    outline-offset: 2px;
+  }
+  .brick-studs {
+    position: absolute;
+    top: -6px;
+    left: 9px;
+    right: 9px;
+    display: flex;
+    justify-content: space-around;
+    pointer-events: none;
+  }
+  .brick-stud {
+    width: 15px;
+    height: 7px;
+    border-radius: 4px 4px 1px 1px;
+    background: var(--brick);
+    box-shadow:
+      inset 0 2px 0 rgba(255, 255, 255, 0.45),
+      inset 0 -1px 0 rgba(0, 0, 0, 0.15);
+  }
+  .brick-dragging {
+    transform: rotate(-3deg) scale(1.05);
+    box-shadow:
+      inset 0 -5px 0 rgba(0, 0, 0, 0.2),
+      0 16px 30px rgba(43, 36, 32, 0.3);
+    cursor: grabbing;
+  }
+
+  .baseplate {
+    border-radius: 18px;
+    background-color: #43a047;
+    background-image: radial-gradient(circle at 12px 12px, rgba(255, 255, 255, 0.28) 5px, rgba(0, 0, 0, 0.12) 6px, transparent 7px);
+    background-size: 24px 24px;
+    box-shadow:
+      inset 0 -6px 0 rgba(0, 0, 0, 0.18),
+      inset 0 3px 0 rgba(255, 255, 255, 0.25),
+      0 4px 0 rgba(43, 36, 32, 0.15);
+  }
+  .baseplate-row {
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.16);
+    box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.15);
+    transition: background 150ms ease;
+  }
+  .baseplate-row-active {
+    background: rgba(255, 255, 255, 0.3);
+    box-shadow:
+      inset 0 2px 6px rgba(0, 0, 0, 0.15),
+      0 0 0 3px rgba(255, 255, 255, 0.85);
+  }
+
+  .toy-button {
+    @apply inline-flex select-none items-center justify-center gap-2 rounded-xl border-[3px] border-ink-800 px-4 py-2 font-bold transition-transform;
+    box-shadow: 0 4px 0 #2b2420;
+  }
+  .toy-button:active:not(:disabled) {
+    transform: translateY(3px);
+    box-shadow: 0 1px 0 #2b2420;
+  }
+  .toy-button:disabled {
+    @apply cursor-not-allowed opacity-50;
+  }
+
+  .card {
+    @apply rounded-2xl border-[3px] border-ink-800 bg-white shadow-chunky;
+  }
+
+  .chip {
+    @apply inline-flex items-center gap-1.5 rounded-full border-2 border-ink-800/20 bg-white px-3 py-1 text-sm font-semibold transition-colors hover:border-ink-800/60;
+  }
+  .chip-on {
+    @apply border-ink-800 bg-brick-yellow;
+  }
+
+  .field-label {
+    @apply mb-1.5 block text-xs font-extrabold uppercase tracking-wider text-ink-400;
+  }
+  .input {
+    @apply w-full rounded-xl border-[3px] border-ink-800/20 bg-cream-50 px-3 py-2 font-semibold outline-none transition-colors focus:border-brick-blue;
+  }
+
+  .color-stud {
+    @apply h-8 w-8 rounded-full border-[3px] border-ink-800/25 transition-transform hover:scale-110;
+    box-shadow:
+      inset 0 3px 0 rgba(255, 255, 255, 0.45),
+      inset 0 -3px 0 rgba(0, 0, 0, 0.2);
+  }
+  .color-stud-on {
+    @apply scale-110 border-ink-800;
+  }
+
+  .terminal {
+    @apply overflow-hidden rounded-2xl border-[3px] border-ink-800 shadow-chunky;
+  }
+  .terminal-line {
+    @apply whitespace-pre font-mono;
+    font-size: 13px;
+    line-height: 20px;
+  }
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(43, 36, 32, 0.2);
+  border-radius: 999px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}

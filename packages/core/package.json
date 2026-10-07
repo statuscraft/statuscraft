@@ -1,0 +1,20 @@
+{
+  "name": "@statuscraft/core",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Widgets, layouts and renderer behind StatusCraft. Pure TypeScript, runs in Node and the browser.",
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "lint": "eslint src",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "zod": "^3.23"
+  },
+  "license": "MIT"
+}

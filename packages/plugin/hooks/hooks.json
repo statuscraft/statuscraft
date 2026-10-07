@@ -1,0 +1,4 @@
+{
+  "description": "The StatusCraft companion mod",
+  "modules": ["./register.ts"]
+}

@@ -1,0 +1,29 @@
+# Dependencies
+node_modules/
+
+# Build output (the CLI build also writes these)
+dist/
+*.tsbuildinfo
+packages/cli/schema.json
+packages/cli/README.md
+packages/cli/LICENSE
+
+# Files Claude Code writes beside a loaded mod
+packages/plugin/.claude-plugin/types/
+packages/plugin/tsconfig.json
+
+# Tests
+coverage/
+test-results/
+playwright-report/
+
+# Editors and OS
+.idea/
+.vscode/
+*.swp
+.DS_Store
+Thumbs.db
+
+# Environment
+.env
+.env.*

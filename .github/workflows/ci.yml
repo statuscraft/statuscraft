@@ -1,0 +1,56 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  check:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: bun install --frozen-lockfile
+      - run: bun run lint
+      - run: bun run typecheck
+      - run: bun run test
+      - run: bun run build
+      - name: Built CLI renders on Node
+        shell: bash
+        run: echo '{"model":{"display_name":"Opus"},"context_window":{"used_percentage":42}}' | node packages/cli/dist/statuscraft-render.mjs
+
+  plugin:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - uses: oven-sh/setup-bun@v2
+      - run: bun install --frozen-lockfile
+      # Marketplace installs copy hooks/vendor as committed, so it must match core
+      - name: The bundled core in the plugin is up to date
+        run: |
+          bun run build:plugin
+          git diff --exit-code packages/plugin/hooks/vendor
+      - name: Validate and test the Claude Code plugin
+        run: |
+          npx -y @anthropic-ai/claude-code@latest plugin validate packages/plugin
+          npx -y @anthropic-ai/claude-code@latest plugin test packages/plugin
+
+  e2e:
+    runs-on: ubuntu-latest
+    needs: check
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+      - run: bun install --frozen-lockfile
+      - run: bunx playwright install --with-deps chromium
+      - run: bun run test:e2e

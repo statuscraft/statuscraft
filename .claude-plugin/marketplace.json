@@ -1,0 +1,11 @@
+{
+  "name": "statuscraft",
+  "owner": { "name": "StatusCraft contributors" },
+  "plugins": [
+    {
+      "name": "statuscraft",
+      "source": "./packages/plugin",
+      "description": "Companion for the StatusCraft status line: /statuscraft command, per-session profiles, turn timer and tool count"
+    }
+  ]
+}

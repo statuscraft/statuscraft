@@ -1,0 +1,44 @@
+{
+  "name": "statuscraft",
+  "version": "1.0.0",
+  "description": "Build your Claude Code status line from bricks: a drag-and-drop editor, presets, profiles and 40+ widgets.",
+  "type": "module",
+  "bin": {
+    "statuscraft": "./dist/statuscraft.js"
+  },
+  "files": [
+    "dist/",
+    "schema.json",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "bun run scripts/build.ts",
+    "dev": "bun run src/index.ts edit --no-open",
+    "lint": "eslint src",
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "@statuscraft/core": "workspace:*"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "keywords": [
+    "claude",
+    "claude-code",
+    "statusline",
+    "status-line",
+    "powerline",
+    "terminal",
+    "cli"
+  ],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/statuscraft/statuscraft.git"
+  },
+  "homepage": "https://github.com/statuscraft/statuscraft#readme",
+  "bugs": {
+    "url": "https://github.com/statuscraft/statuscraft/issues"
+  }
+}
