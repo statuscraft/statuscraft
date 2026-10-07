@@ -202,13 +202,20 @@ export function bundledPluginDir(): string {
 }
 
 // Tests, build scripts, type stubs and installed packages are only needed while working on the mod
-const SKIPPED = new Set(['tests', 'scripts', 'types', path.join('.claude-plugin', 'types')]);
+const SKIPPED = new Set(['tests', 'scripts', 'types', '.claude-plugin/types']);
 
-export function copyPluginFiles(from: string, to: string): void {
-  fs.cpSync(from, to, {
-    recursive: true,
-    filter: (source) => path.basename(source) !== 'node_modules' && !SKIPPED.has(path.relative(from, source)),
-  });
+// Walks the tree itself, so the skip list sees the same relative paths on every system
+export function copyPluginFiles(from: string, to: string, relative = ''): void {
+  for (const entry of fs.readdirSync(path.join(from, relative), { withFileTypes: true })) {
+    const rel = relative ? `${relative}/${entry.name}` : entry.name;
+    if (entry.name === 'node_modules' || SKIPPED.has(rel)) continue;
+    if (entry.isDirectory()) {
+      copyPluginFiles(from, to, rel);
+    } else {
+      fs.mkdirSync(path.dirname(path.join(to, rel)), { recursive: true });
+      fs.copyFileSync(path.join(from, rel), path.join(to, rel));
+    }
+  }
 }
 
 export function marketplaceManifest(description?: string) {

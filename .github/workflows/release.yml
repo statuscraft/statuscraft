@@ -13,6 +13,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: oven-sh/setup-bun@v2
+        with:
+          # The plugin's bundled core must rebuild byte for byte, so every run uses the same Bun
+          bun-version-file: .bun-version
       - uses: actions/setup-node@v4
         with:
           node-version: 20

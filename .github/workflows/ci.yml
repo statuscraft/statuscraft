@@ -14,6 +14,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: oven-sh/setup-bun@v2
+        with:
+          # The plugin's bundled core must rebuild byte for byte, so every run uses the same Bun
+          bun-version-file: .bun-version
       - uses: actions/setup-node@v4
         with:
           node-version: 20
@@ -34,6 +37,9 @@ jobs:
         with:
           node-version: 20
       - uses: oven-sh/setup-bun@v2
+        with:
+          # The plugin's bundled core must rebuild byte for byte, so every run uses the same Bun
+          bun-version-file: .bun-version
       - run: bun install --frozen-lockfile
       # Marketplace installs copy hooks/vendor as committed, so it must match core
       - name: The bundled core in the plugin is up to date
@@ -51,6 +57,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: oven-sh/setup-bun@v2
+        with:
+          # The plugin's bundled core must rebuild byte for byte, so every run uses the same Bun
+          bun-version-file: .bun-version
       - run: bun install --frozen-lockfile
       - run: bunx playwright install --with-deps chromium
       - run: bun run test:e2e

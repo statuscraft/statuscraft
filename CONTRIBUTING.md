@@ -4,7 +4,7 @@ Thanks for helping! This guide gets you from clone to pull request.
 
 ## Setup
 
-You need [Bun](https://bun.sh) 1.1 or newer, and Node.js 20 or newer.
+You need [Bun](https://bun.sh) at the version in `.bun-version` (CI uses exactly that one, so the plugin's bundled core rebuilds byte for byte), and Node.js 20 or newer.
 
 ```sh
 bun install
