@@ -20,9 +20,9 @@ export const WidgetConfigSchema = z.object({
   metadata: z.record(z.string(), z.string()).optional(),
   character: z.string().optional(),
   customText: z.string().optional(),
-  commandPath: z.string().optional(),
+  commandPath: z.string().max(8192).optional(),
   maxWidth: z.number().optional(),
-  timeout: z.number().optional(),
+  timeout: z.number().int().min(100).max(5000).optional(),
   preserveColors: z.boolean().optional(),
 });
 
@@ -38,7 +38,7 @@ export const PowerlineConfigSchema = z.object({
 
 export const SettingsSchema = z.object({
   version: z.number().default(CURRENT_SETTINGS_VERSION),
-  lines: z.array(z.array(WidgetConfigSchema)).min(1).max(3),
+  lines: z.array(z.array(WidgetConfigSchema).max(100)).min(1).max(3),
   terminalApp: z.string().optional(),
   terminalTheme: z.string().optional(),
   flexMode: z.enum(['full', 'full-minus-40', 'full-until-compact']).default('full-minus-40'),

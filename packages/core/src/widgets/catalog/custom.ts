@@ -16,7 +16,7 @@ export const customWidgets = [
   defineWidget({
     type: 'custom-command',
     name: 'Command',
-    description: 'The first line printed by a shell command you choose',
+    description: 'The first line printed by a shell command you review and approve',
     category: 'custom',
     emoji: '🖥️',
     defaultColor: 'white',

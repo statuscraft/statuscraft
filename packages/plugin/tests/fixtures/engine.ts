@@ -64,6 +64,7 @@ export interface EngineOptions {
   run?: (argv: readonly string[]) => { exitCode: number; stdout: string; stderr: string }
   // What Claude Code's own permission check decides
   decision?: 'allow' | 'ask' | 'deny'
+  checkError?: boolean
   // A line another mod beneath this one puts under the answer
   turnText?: string
   // How long a tool call runs, on the mock clock
@@ -150,7 +151,10 @@ export function stubEngine(on: On, options: EngineOptions = {}): Engine {
     return { result: 'ok' }
   })
   on('prompt.submit', ($, e) => ({ text: e.text }))
-  on('tool.check', () => ({ decision: options.decision ?? 'allow', reason: 'settings' }))
+  on('tool.check', () => {
+    if (options.checkError) throw new Error('permission decision unavailable')
+    return { decision: options.decision ?? 'allow', reason: 'settings' }
+  })
   on('command.run', ($, e) => ({ text: `Claude Code ran /${e.command}` }))
   on('session.measure', ($, e) => ({ changed: e.changed }))
   on('session.usage', () => {

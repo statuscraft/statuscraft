@@ -28,6 +28,8 @@ import {
   GIT_STATUS_ARGS,
   guardCheck,
   hintText,
+  CommandTrustSchema,
+  isCommandTrusted,
   modString,
   parseConfig,
   parseGitStatus,
@@ -790,9 +792,14 @@ export const register: Register = (on) => {
   }).catch(async ($, e, next) => {
     // With a guard placed, a check that failed asks rather than waving the command through
     if (enabledMods(mods, 'guard').length === 0) return undefined
-    const decided = await next(e)
-    if (decided?.decision === 'deny') return decided
-    return { decision: 'ask', reason: '🛡️ StatusCraft could not check this call against your guards, so it asks first.' }
+    try {
+      const decided = await next(e)
+      if (decided?.decision === 'deny') return decided
+      return { decision: 'ask', reason: '🛡️ StatusCraft could not check this call against your guards, so it asks first.' }
+    } catch {
+      // If the underlying permission decision is unavailable, do not guess "allow".
+      return { decision: 'deny', reason: '🛡️ StatusCraft could not verify the permission decision. Fix the guard or disable it before retrying.' }
+    }
   })
 
   // Prompt Shortcuts: ;name grows into its prompt when you send it
@@ -814,13 +821,18 @@ export const register: Register = (on) => {
         cwd = undefined
       }
       try {
+        // Re-read at execution time: changed/revoked approvals take effect immediately.
+        const trust = CommandTrustSchema.safeParse(JSON.parse(await $.fs.read(`${await configDir($)}/trusted-commands.json`)))
+        if (!trust.success || !isCommandTrusted(trust.data, { kind: 'quick-command', scope: 'global', command: command.command })) {
+          return { text: `/${e.command} is disabled until its shell command is reviewed. Run \`npx statuscraft trust --mods\` in a terminal, or review it in the local editor.` }
+        }
         const result = await $.process.run(['sh', '-c', command.command, command.name, ...args], { ...(cwd ? { cwd } : {}), timeoutMs: COMMAND_TIMEOUT_MS })
         let text = plainText(`${result.stdout}${result.stderr ? `\n${result.stderr}` : ''}`).trim()
         if (text.length > MAX_COMMAND_OUTPUT) text = `${text.slice(0, MAX_COMMAND_OUTPUT)}\n… (cut at ${MAX_COMMAND_OUTPUT} characters)`
         if (!text) text = '(no output)'
         return { text: result.exitCode === 0 ? text : `${text}\n(exited with code ${result.exitCode})` }
       } catch (error) {
-        return { text: `Could not run "${command.command}": ${error instanceof Error ? error.message : String(error)}` }
+        return { text: `Could not run /${e.command}. Check command approvals with \`npx statuscraft trust --mods\`: ${error instanceof Error ? error.message : String(error)}` }
       }
     }
     if (registered.has(e.command)) return { text: `/${e.command} is no longer in your StatusCraft mods. Run \`npx statuscraft\` to add it back.` }

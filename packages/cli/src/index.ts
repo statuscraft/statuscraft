@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 import { applyCommand, initCommand, installCommand, uninstallCommand } from './commands/setup';
+import { trustCommand } from './commands/trust';
 import { doctorCommand } from './commands/doctor';
 import { editCommand } from './commands/edit';
 import { modsCommand } from './commands/mods';
@@ -25,6 +26,10 @@ ${c.bold('More')}
   npx statuscraft mods              list the mods you placed in the editor
   npx statuscraft mods install      add the StatusCraft mod to Claude Code
   npx statuscraft mods uninstall    take it out again (your mods are kept)
+  npx statuscraft trust             review shell commands before enabling them
+        --project / --local         approve commands for this project only
+        --mods                      review Quick Command mods
+        --revoke                    disable all previously approved commands
   npx statuscraft doctor            find out why something does not show
   npx statuscraft uninstall         put your old status line back
   npx statuscraft render            draw the status line from JSON on stdin
@@ -79,6 +84,8 @@ async function main(argv: string[]): Promise<number> {
     case 'mods':
     case 'mod':
       return modsCommand(args);
+    case 'trust':
+      return trustCommand({ project: flag(args, '--project'), local: flag(args, '--local'), mods: flag(args, '--mods'), revoke: flag(args, '--revoke'), profile: option(args, '--profile') });
     case 'doctor':
       return doctorCommand();
     case '--version':

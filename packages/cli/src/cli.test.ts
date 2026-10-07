@@ -37,6 +37,7 @@ beforeEach(() => {
   // Never reach the real Claude Code from tests
   process.env['STATUSCRAFT_CLAUDE_BIN'] = path.join(sandbox, 'no-claude');
   delete process.env['STATUSCRAFT_PROFILE'];
+  vi.spyOn(paths, 'legacyConfigFile').mockReturnValue(path.join(sandbox, 'legacy.json'));
 });
 
 afterEach(() => {
@@ -165,7 +166,7 @@ describe('config store', () => {
     fs.mkdirSync(paths.configDir(), { recursive: true });
     fs.writeFileSync(paths.configFile(), '{ nope');
     const { backup } = saveConfig(loadConfig().config);
-    expect(backup).toMatch(/config\.json\.broken-/);
+    expect(backup).toContain("config.json.backups");
     expect(fs.readFileSync(backup!, 'utf8')).toBe('{ nope');
     expect(loadConfig().error).toBeUndefined();
     expect(saveConfig(loadConfig().config).backup).toBeUndefined();
@@ -396,7 +397,7 @@ describe('Claude Code settings', () => {
     writeClaudeSettings({ theme: 'dark', statusLine: other });
     expect(uninstall()).toEqual({ restored: false, notOurs: true });
     expect(JSON.parse(fs.readFileSync(paths.claudeSettingsFile(), 'utf8'))).toEqual({ theme: 'dark', statusLine: other });
-    expect(fs.existsSync(paths.previousStatusLineFile())).toBe(false);
+    expect(fs.existsSync(paths.previousStatusLineFile())).toBe(true);
   });
 
   it('refuses to touch a settings file it cannot read', () => {
@@ -469,7 +470,7 @@ describe('editor server', () => {
       const saved = await fetch(`${base}/api/config`, {
         method: 'PUT',
         headers: { 'content-type': 'application/json', 'x-statuscraft': '1' },
-        body: JSON.stringify({ config }),
+        body: JSON.stringify({ config, expectedRevision: state.data.configRevision }),
       });
       expect((await saved.json()).ok).toBe(true);
       expect(loadConfig().config.profiles['default']?.lines[0]?.[0]?.type).toBe('repo');
@@ -481,7 +482,7 @@ describe('editor server', () => {
       const state = await (await fetch(`${base}/api/mods`)).json();
       expect(state).toMatchObject({ ok: true, data: { exists: false, mods: { mods: [] }, plugin: { claude: { found: false }, installed: false } } });
       const write = (body: unknown) =>
-        fetch(`${base}/api/mods`, { method: 'PUT', headers: { 'content-type': 'application/json', 'x-statuscraft': '1' }, body: JSON.stringify(body) });
+        fetch(`${base}/api/mods`, { method: 'PUT', headers: { 'content-type': 'application/json', 'x-statuscraft': '1' }, body: JSON.stringify({ ...body as object, expectedRevision: state.data.revision }) });
       const saved = await (await write({ mods: { version: 1, mods: [{ id: 'm1', type: 'context-meter' }] } })).json();
       expect(saved).toEqual({ ok: true, data: { saved: true, path: paths.modsFile() } });
       expect(loadMods().mods.mods[0]).toMatchObject({ id: 'm1', type: 'context-meter', enabled: true });

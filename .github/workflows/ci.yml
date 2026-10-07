@@ -35,7 +35,8 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          # Current Claude Code releases require Node 22; the package matrix still tests Node 20.
+          node-version: 22
       - uses: oven-sh/setup-bun@v2
         with:
           # The plugin's bundled core must rebuild byte for byte, so every run uses the same Bun

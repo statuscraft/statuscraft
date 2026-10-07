@@ -4,7 +4,7 @@ import { c, fail, ok } from '../lib/ui';
 import { brokenConfig, previewLayout } from './setup';
 
 export function profileCommand(args: string[]): number {
-  const { config, error } = loadConfig();
+  const { config, error, revision } = loadConfig();
   if (error) return brokenConfig(error);
   const [action, name] = args;
 
@@ -13,7 +13,7 @@ export function profileCommand(args: string[]): number {
       fail(`No profile called "${name ?? ''}". You have: ${Object.keys(config.profiles).join(', ')}`);
       return 1;
     }
-    saveConfig({ ...config, activeProfile: name });
+    saveConfig({ ...config, activeProfile: name }, revision);
     ok(`Now using profile ${c.bold(name)}`);
     return 0;
   }

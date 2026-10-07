@@ -245,7 +245,7 @@ export const MODS: readonly ModDefinition[] = [
   {
     type: 'protected-files',
     name: 'Protected Files',
-    description: 'Asks you first when Claude wants to change secrets, keys, lockfiles or the .git folder',
+    description: 'Asks before Claude edits matching files with its file tools',
     emoji: '🔐',
     slot: 'guard',
     color: '#283593',
@@ -279,7 +279,7 @@ export const MODS: readonly ModDefinition[] = [
   {
     type: 'quick-command',
     name: 'Quick Command',
-    description: 'A /command that runs a shell command and shows the output, without asking Claude',
+    description: 'A /command that runs a shell command you review and approve',
     emoji: '⚡',
     slot: 'command',
     color: '#6D4C41',

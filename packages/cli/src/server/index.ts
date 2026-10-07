@@ -2,12 +2,14 @@ import * as fs from 'node:fs';
 import * as http from 'node:http';
 import * as path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { currentDir, parseConfig, parseModsConfig, parseStatusInput, type ProjectConfig } from '@statuscraft/core';
+import { currentDir, parseConfig, parseModsConfig, parseStatusInput, CommandApprovalSchema, type CommandApproval, type ProjectConfig } from '@statuscraft/core';
 import { installPlugin, pluginState, uninstallPlugin } from '../lib/claude-plugins';
 import { getInstallState, install, uninstall } from '../lib/claude-settings';
 import { loadConfig, loadMods, loadProject, saveConfig, saveMods, saveProjectFile } from '../lib/config-store';
 import { paths } from '../lib/paths';
 import { getGitInfo } from '../providers/git';
+import { approveCommands, commandScope, loadCommandTrust } from '../lib/command-trust';
+import { ConfigConflictError } from '../lib/files';
 import { VERSION } from '../version';
 
 const MIME: Record<string, string> = {
@@ -38,10 +40,12 @@ export function createServer(options: { port: number; projectDir: string; editor
         config: loaded.config,
         configPath: loaded.path,
         configExists: loaded.exists,
+        configRevision: loaded.revision,
+        commandTrust: loadCommandTrust().trust,
         configError: loaded.error,
         importedFrom: loaded.importedFrom,
         install: getInstallState(),
-        project: loadProject(options.projectDir),
+        project: { ...loadProject(options.projectDir), dir: fs.realpathSync(options.projectDir) },
         hasLastInput: fs.existsSync(paths.lastInputFile()),
       };
     },
@@ -58,7 +62,7 @@ export function createServer(options: { port: number; projectDir: string; editor
     'PUT /api/config': (body) => {
       const parsed = parseConfig((body as { config?: unknown })?.config);
       if (!parsed.ok) throw new HttpError(400, parsed.error);
-      return { saved: true, path: paths.configFile(), ...saveConfig(parsed.value) };
+      return { saved: true, path: paths.configFile(), ...saveConfig(parsed.value, expectedRevision(body)) };
     },
 
     'POST /api/install': () => {
@@ -68,7 +72,7 @@ export function createServer(options: { port: number; projectDir: string; editor
 
     'POST /api/uninstall': () => uninstall(),
 
-    'GET /api/mods': async () => ({ ...loadMods(), plugin: await pluginState() }),
+    'GET /api/mods': async () => ({ ...loadMods(), commandTrust: loadCommandTrust().trust, plugin: await pluginState() }),
 
     'PUT /api/mods': (body) => {
       const raw = (body as { mods?: unknown } | undefined)?.mods;
@@ -76,7 +80,19 @@ export function createServer(options: { port: number; projectDir: string; editor
       if (raw === undefined || raw === null) throw new HttpError(400, 'mods is missing');
       const parsed = parseModsConfig(raw);
       if (!parsed.ok) throw new HttpError(400, parsed.error);
-      return { saved: true, ...saveMods(parsed.value) };
+      return { saved: true, ...saveMods(parsed.value, expectedRevision(body)) };
+    },
+
+    'POST /api/commands/trust': (body) => {
+      const raw = (body as { approvals?: unknown })?.approvals;
+      if (!Array.isArray(raw) || raw.length > 300) throw new HttpError(400, 'Invalid command approvals');
+      const approvals: CommandApproval[] = raw.map((item) => {
+        const parsed = CommandApprovalSchema.safeParse(item);
+        if (!parsed.success || !['global', commandScope(options.projectDir)].includes(parsed.data.scope)) throw new HttpError(400, 'Invalid command approval');
+        return parsed.data;
+      });
+      approveCommands(approvals);
+      return { approved: true };
     },
 
     'POST /api/mods/install': () => installPlugin(),
@@ -86,7 +102,8 @@ export function createServer(options: { port: number; projectDir: string; editor
     'PUT /api/project': (body) => {
       const { which, data } = body as { which?: 'project' | 'local'; data?: ProjectConfig | null };
       if (which !== 'project' && which !== 'local') throw new HttpError(400, 'which must be "project" or "local"');
-      return { file: saveProjectFile(options.projectDir, which, data ?? null) };
+      if (data === undefined) throw new HttpError(400, 'data is missing');
+      return { file: saveProjectFile(options.projectDir, which, data, expectedRevision(body)) };
     },
   };
 
@@ -106,10 +123,16 @@ export function createServer(options: { port: number; projectDir: string; editor
 
       serveStatic(res, editorDir, url.pathname);
     } catch (error) {
-      const status = error instanceof HttpError ? error.status : 500;
+      const status = error instanceof HttpError ? error.status : error instanceof ConfigConflictError ? 409 : 500;
       send(res, status, { ok: false, error: error instanceof Error ? error.message : String(error) });
     }
   });
+}
+
+function expectedRevision(body: unknown): string | null {
+  const revision = (body as { expectedRevision?: unknown })?.expectedRevision;
+  if (revision !== null && typeof revision !== 'string') throw new HttpError(400, 'expectedRevision is missing; reload before saving');
+  return revision;
 }
 
 // Only answer requests addressed to localhost, which blocks DNS rebinding.
@@ -117,6 +140,8 @@ function assertLocal(req: http.IncomingMessage, port: number): void {
   const host = (req.headers.host ?? '').toLowerCase();
   const allowed = [`localhost:${port}`, `127.0.0.1:${port}`, `[::1]:${port}`];
   if (!allowed.includes(host)) throw new HttpError(403, 'StatusCraft only answers on localhost');
+  const origin = req.headers.origin;
+  if (origin && origin !== `http://${host}`) throw new HttpError(403, 'Cross-origin requests are not allowed');
 }
 
 function readBody(req: http.IncomingMessage): Promise<unknown> {
@@ -145,8 +170,9 @@ function send(res: http.ServerResponse, status: number, body: unknown): void {
 
 function serveStatic(res: http.ServerResponse, root: string, pathname: string): void {
   const relative = path.normalize(decodeURIComponent(pathname)).replace(/^([/\\])+/, '');
-  let file = path.join(root, relative);
-  if (!file.startsWith(root) || !fs.existsSync(file) || fs.statSync(file).isDirectory()) {
+  const resolvedRoot = path.resolve(root);
+  let file = path.resolve(resolvedRoot, relative);
+  if (!file.startsWith(resolvedRoot + path.sep) || !fs.existsSync(file) || fs.statSync(file).isDirectory()) {
     file = path.join(root, 'index.html');
   }
   if (!fs.existsSync(file)) {
