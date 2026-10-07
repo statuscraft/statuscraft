@@ -35,7 +35,13 @@ jobs:
         # workspace:* is only a build-time link: core is bundled into dist/
         run: |
           node -e "const p=require('./package.json'); delete p.dependencies; delete p.devDependencies; require('fs').writeFileSync('package.json', JSON.stringify(p, null, 2))"
-          npm publish --access public --provenance
+          version=$(node -p "require('./package.json').version")
+          published=$(npm view "statuscraft@$version" version --json 2>/dev/null || true)
+          if [ "$published" = "\"$version\"" ]; then
+            echo "statuscraft@$version is already published; completing the GitHub release."
+          else
+            npm publish --access public --provenance
+          fi
         # npm authenticates with this workflow's OIDC identity; no persistent token.
       - uses: softprops/action-gh-release@v2
         with:
