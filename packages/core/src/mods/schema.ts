@@ -4,7 +4,7 @@ import { z } from 'zod';
 // Claude Code mod reads this file and does what each entry says.
 export const MODS_VERSION = 1;
 
-export const ModOptionValueSchema = z.union([z.string(), z.number(), z.boolean()]);
+export const ModOptionValueSchema = z.union([z.string().max(8192), z.number(), z.boolean()]);
 
 export const ModInstanceSchema = z.object({
   id: z.string().min(1),
@@ -17,7 +17,7 @@ export const ModInstanceSchema = z.object({
 export const ModsConfigSchema = z.object({
   $schema: z.string().optional(),
   version: z.literal(MODS_VERSION).default(MODS_VERSION),
-  mods: z.array(ModInstanceSchema).default([]),
+  mods: z.array(ModInstanceSchema).max(100).default([]),
 });
 
 export type ModOptionValue = z.infer<typeof ModOptionValueSchema>;

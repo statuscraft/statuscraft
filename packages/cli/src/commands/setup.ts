@@ -3,6 +3,7 @@ import {
   decodeShareCode,
   getPreset,
   isShareCode,
+  layoutCommandApprovals,
   parseLayout,
   PRESETS,
   renderStatusText,
@@ -44,7 +45,10 @@ export async function initCommand(options: { preset?: string; yes?: boolean }): 
     if (preset.needsNerdFont) warn('This look uses powerline arrows. If you see boxes instead, install a Nerd Font (https://www.nerdfonts.com).');
   }
 
-  saveConfig(config);
+  // Refuse before creating our own config if Claude settings cannot be backed up.
+  const state = getInstallState();
+  if (state.error) return brokenConfig(state.error);
+  saveConfig(config, loaded.revision);
   ok(`Saved ${c.dim(loaded.path)}`);
   return installCommand();
 }
@@ -110,11 +114,12 @@ export async function applyCommand(source: string | undefined, options: { profil
     const file = saveProjectFile(process.cwd(), options.local ? 'local' : 'project', { layout: layout.value });
     ok(`Saved this layout for this project in ${c.dim(file)}`);
   } else {
-    const { config, error } = loadConfig();
+    const { config, error, revision } = loadConfig();
     if (error) return brokenConfig(error);
-    saveConfig(withActiveLayout(config, layout.value, options.profile));
+    saveConfig(withActiveLayout(config, layout.value, options.profile), revision);
     ok(`Saved to profile ${c.bold(options.profile ?? config.activeProfile)}`);
   }
+  if (layoutCommandApprovals(layout.value).length) warn(`Shell commands stay disabled until reviewed. Run npx statuscraft trust${options.project || options.local ? ' --project' : ''}.`);
   console.log('\n  ' + previewLayout(layout.value).split('\n').join('\n  ') + '\n');
   if (!getInstallState().ours) info(`Run ${c.cyan('npx statuscraft init')} to switch Claude Code over to StatusCraft.`);
   return 0;

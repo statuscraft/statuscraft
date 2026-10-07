@@ -83,7 +83,7 @@ StatusCraft has 43 bricks. Examples show a busy session.
 | Brick | Type | Example | What it shows |
 | --- | --- | --- | --- |
 | 💬 Text | `custom-text` | `🚀 ship it` | Any text or emoji you like (options: customText) |
-| 🖥️ Command | `custom-command` | `$(date +%H:%M)` | The first line printed by a shell command you choose (options: commandPath, timeout, maxWidth) |
+| 🖥️ Command | `custom-command` | `$(date +%H:%M)` | The first line printed by a shell command you review and approve (options: commandPath, timeout, maxWidth) |
 
 ## 📐 Layout
 
@@ -91,3 +91,5 @@ StatusCraft has 43 bricks. Examples show a busy session.
 | --- | --- | --- | --- |
 | │ Separator | `separator` | `│` | A divider between bricks (options: character) |
 | ↔ Spacer | `flex-separator` | (hidden) | Pushes everything after it to the right edge |
+
+Command widgets execute only after an explicit approval in the local editor or with `npx statuscraft trust` (`--project` for a project layout). Shared/imported layouts cannot approve themselves. Commands run with your user permissions; see [backups and command safety](../README.md#backups-and-command-safety).

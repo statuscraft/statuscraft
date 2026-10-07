@@ -3,6 +3,11 @@ import {
   createDefaultConfig,
   createDefaultModsConfig,
   createDefaultSettings,
+  isCommandTrusted,
+  layoutCommandApprovals,
+  quickCommands,
+  type CommandApproval,
+  type CommandTrust,
   parseConfig,
   parseModsConfig,
   type ModsConfig,
@@ -132,7 +137,15 @@ function modsMessage(plugin: ModsState['plugin']): string | undefined {
 }
 
 function keptMessage(backup: string | undefined): string {
-  return backup ? ` Your old file had a problem, so I kept a copy at ${backup}.` : '';
+  return backup ? ` A backup of your previous file is saved at ${backup}.` : '';
+}
+
+function reviewCommands(approvals: CommandApproval[], trust: CommandTrust): CommandApproval[] {
+  const pending = approvals.filter((item) => !isCommandTrusted(trust, item));
+  if (!pending.length) return [];
+  const commands = [...new Set(pending.map((item) => JSON.stringify(item.command)))].join('\n\n');
+  const scope = pending.every((item) => item.scope === 'global') ? 'These commands can run in any project.' : 'Approval applies only to this project.';
+  return window.confirm(`Allow these shell commands to run on your computer?\n\n${commands}\n\n${scope} They have your user permissions and run outside Claude Code’s tool approval checks. Changed commands require approval again.\n\nOK allows them. Cancel saves your design with unapproved commands disabled.`) ? pending : [];
 }
 
 let toastId = 0;
@@ -287,8 +300,11 @@ export const useEditor = create<EditorState>()((set, get) => ({
     set({ busy: true });
     try {
       const next = { ...config, activeProfile: profile };
-      const saved = await api.saveConfig(next);
       const server = get().server;
+      if (!server) throw new Error('Reload the editor before saving.');
+      const approvals = reviewCommands(Object.values(next.profiles).flatMap((layout) => layoutCommandApprovals(layout)), server.commandTrust);
+      const saved = await api.saveConfig(next, server.configRevision);
+      if (approvals.length) await api.approveCommands(approvals);
       if (!server?.install.ours) await api.install();
       const fresh = await api.state();
       set({ config: next, savedJson: JSON.stringify(next), server: fresh });
@@ -321,19 +337,23 @@ export const useEditor = create<EditorState>()((set, get) => ({
     }
     set({ busy: true });
     try {
-      const saved = await api.saveMods(mods);
+      const before = get().modsServer;
+      if (!before) throw new Error('Reload the editor before saving mods.');
+      const approvals = reviewCommands(quickCommands(mods).map((command) => ({ kind: 'quick-command', scope: 'global', command: command.command })), before.commandTrust);
+      const saved = await api.saveMods(mods, before.revision);
+      if (approvals.length) await api.approveCommands(approvals);
       const kept = keptMessage(saved.backup);
       set({ savedModsJson: JSON.stringify(mods) });
-      const before = await api.mods();
-      const problem = modsMessage(before.plugin);
+      const current = await api.mods();
+      const problem = modsMessage(current.plugin);
       if (problem) {
-        set({ modsServer: before });
+        set({ modsServer: current });
         get().showToast(`Saved your mods. ${problem}${kept}`, 'worried');
         return;
       }
-      const wasInstalled = before.plugin.installed && before.plugin.enabled;
+      const wasInstalled = current.plugin.installed && current.plugin.enabled;
       if (!wasInstalled) await api.installMods();
-      const fresh = wasInstalled ? before : await api.mods();
+      const fresh = wasInstalled ? current : await api.mods();
       set({ modsServer: fresh });
       if (fresh.plugin.disabledByHooksSetting) {
         get().showToast('Saved, but "disableAllHooks" is on in your Claude Code settings, so mods stay off.' + kept, 'worried');
@@ -366,7 +386,12 @@ export const useEditor = create<EditorState>()((set, get) => ({
     const layout = selectLayout(get());
     set({ busy: true });
     try {
-      const { file } = await api.saveProject(which, { layout });
+      const server = get().server;
+      if (!server) throw new Error('Reload the editor before saving.');
+      const scope = `project:${server.project.dir}`;
+      const approvals = reviewCommands(layoutCommandApprovals(layout, scope), server.commandTrust);
+      const { file } = await api.saveProject(which, { layout }, which === 'project' ? server.project.projectRevision : server.project.localRevision);
+      if (approvals.length) await api.approveCommands(approvals);
       set({ server: await api.state(), dialog: undefined });
       get().showToast(`Saved for this project in ${file}`, 'happy');
     } catch (error) {

@@ -1,6 +1,6 @@
 {
   "name": "statuscraft",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Build your Claude Code status line from bricks: a drag-and-drop editor, presets, profiles and 40+ widgets.",
   "type": "module",
   "bin": {

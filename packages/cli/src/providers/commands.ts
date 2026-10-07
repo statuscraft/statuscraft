@@ -9,10 +9,18 @@ export async function runCommands(
   widgets: readonly WidgetConfig[],
   options: { cwd?: string; stdin: string },
 ): Promise<Record<string, string | null>> {
-  const results = await Promise.all(
-    widgets.map(async (widget) => [widget.id, await runCommand(widget, options)] as const),
-  );
-  return Object.fromEntries(results);
+  const results: Record<string, string | null> = {};
+  let index = 0;
+  const deadline = Date.now() + 5000;
+  // A large shared layout must not spawn hundreds of processes at once.
+  await Promise.all(Array.from({ length: Math.min(4, widgets.length) }, async () => {
+    while (index < widgets.length) {
+      const widget = widgets[index++]!;
+      const remaining = deadline - Date.now();
+      results[widget.id] = remaining <= 0 ? null : await runCommand({ ...widget, timeout: Math.min(widget.timeout ?? DEFAULT_TIMEOUT_MS, remaining) }, options);
+    }
+  }));
+  return results;
 }
 
 // Stop the command and everything it started: a program the shell launched would otherwise
@@ -20,7 +28,10 @@ export async function runCommands(
 function killTree(child: ChildProcess): void {
   try {
     if (process.platform !== 'win32' && child.pid !== undefined) process.kill(-child.pid, 'SIGKILL');
-    else child.kill();
+    else if (child.pid !== undefined) {
+      // Killing cmd.exe alone leaves the shell's children running on Windows.
+      spawn('taskkill', ['/pid', String(child.pid), '/T', '/F'], { windowsHide: true, stdio: 'ignore' }).on('error', () => child.kill());
+    } else child.kill();
   } catch {
     // Already gone
   }
@@ -29,7 +40,7 @@ function killTree(child: ChildProcess): void {
 function runCommand(widget: WidgetConfig, options: { cwd?: string; stdin: string }): Promise<string | null> {
   const command = widget.commandPath;
   if (!command) return Promise.resolve(null);
-  const timeout = widget.timeout && widget.timeout > 0 ? widget.timeout : DEFAULT_TIMEOUT_MS;
+  const timeout = widget.timeout && widget.timeout > 0 ? Math.min(5000, Math.max(100, widget.timeout)) : DEFAULT_TIMEOUT_MS;
 
   return new Promise((resolve) => {
     let output = '';

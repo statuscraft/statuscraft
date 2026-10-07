@@ -1,3 +1,4 @@
+import { prepareClaudeSettings } from './claude-settings';
 import { spawn } from 'node:child_process';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
@@ -307,6 +308,7 @@ export async function installPlugin(): Promise<PluginInstallResult> {
   }
   if (state.error) throw new Error(state.error);
 
+  prepareClaudeSettings();
   const log: string[] = [];
   try {
     if (state.installed && state.source === 'marketplace' && state.id) {
@@ -346,6 +348,7 @@ export async function uninstallPlugin(): Promise<{ removed: boolean }> {
   const { state, entries } = await inspect(true);
   if (state.error) throw new Error(state.error);
 
+  prepareClaudeSettings();
   const log: string[] = [];
   let removed = false;
   try {

@@ -29,19 +29,23 @@ The editor saves your mods to `~/.config/statuscraft/mods.json`. The plugin chec
 | Pop-up alerts | Context Alert, Limit Alert, Done Alert | A toast once when context or the 5-hour limit crosses your mark, or when an answer took longer than your mark (not when you interrupted it) |
 | Safety guards | Danger Guard, Protected Files | Turns an allowed `rm -rf`, force push or `git reset --hard`, or an edit to a protected file (`.env`, keys, lockfiles, `.git/`), into a question. Guards only ever ask: they never approve a call and never lift a deny. |
 | Prompt shortcuts | Prompt Shortcuts | `;tests` and the like grow into their full prompt when you send it. Nothing else in a prompt changes. |
-| Slash commands | Quick Command | Adds `/<name>`, which runs your shell command (`sh -c`, in the session's folder, 30 s limit) and prints its output without asking Claude |
+| Slash commands | Quick Command | Adds `/<name>`, which runs your shell command (`sh -c`, in the session's folder, 30 s limit) and prints its output after you explicitly approve the exact command in the local editor or with `npx statuscraft trust --mods` |
 
 ## What it reads, writes and runs
 
 As `claude plugin validate packages/plugin` lists it:
 
 - **Writes** `~/.cache/statuscraft/sessions/<session id>.json` (turn timer, tool count, session profile) for the status line
-- **Reads** `~/.config/statuscraft/mods.json`, `~/.config/statuscraft/config.json`, `~/.cache/statuscraft/last-input.json` (what the status line saw last, for figures the mods API lacks), and `~/.claude/settings.json` (once, to suggest `/statuscraft setup`)
+- **Reads** `~/.config/statuscraft/trusted-commands.json` before each Quick Command, `~/.config/statuscraft/mods.json`, `~/.config/statuscraft/config.json`, `~/.cache/statuscraft/last-input.json` (what the status line saw last, for figures the mods API lacks), and `~/.claude/settings.json` (once, to suggest `/statuscraft setup`)
 - **Reads** the session's context use, rate limits, cost, model and folder from Claude Code, only while a mod that shows them is placed
 - **Runs** `git branch --show-current` (or `git status` and `git diff --shortstat` for a Live Status Line with git bricks) at most every 10 seconds, only when a placed mod shows the branch; your Quick Commands when you type them; `npx statuscraft@<version>` (the CLI release this plugin was built with) only for `/statuscraft setup` and `/statuscraft doctor`
 - It never changes your tool calls, and changes a prompt only to grow the `;shortcuts` you placed. The guards can only make Claude Code ask you first.
 
 `STATUSCRAFT_CONFIG_DIR`, `STATUSCRAFT_CACHE_DIR`, `XDG_CONFIG_HOME` and `XDG_CACHE_HOME` move those folders, as they do for the CLI.
+
+Quick Commands remain disabled when approvals are missing, malformed, revoked or do not match the current command text. An approval also trusts the programs/scripts the command invokes; changes to those files are not tracked. Guards are best-effort checks for supported tool calls, not a sandbox, and do not protect against arbitrary shell scripts or processes started by mods. The plugin preserves existing deny decisions and never approves tool calls for you.
+
+To remove the mod, run `npx statuscraft mods uninstall`. `npx statuscraft uninstall` removes only the separate status line. Start `claude --safe-mode` if a mod disrupts a session. See the main README's [backup and safety guide](../../README.md#backups-and-command-safety).
 
 ## Developing
 

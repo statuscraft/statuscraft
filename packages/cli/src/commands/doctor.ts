@@ -51,7 +51,7 @@ export async function doctorCommand(): Promise<number> {
   info(`In this folder StatusCraft draws ${here.profile ? `profile "${here.profile}"` : 'a layout'} (chosen by: ${here.source})`);
 
   const sample = createScenarioContext('busy').input;
-  const output = await renderFromStdin(JSON.stringify({ ...sample, session_id: undefined }));
+  const output = await renderFromStdin(JSON.stringify({ ...sample, session_id: undefined }), Date.now(), { executeCommands: false });
   console.log(`\n  ${c.dim('Sample render:')}\n  ${output.split('\n').join('\n  ')}\n`);
 
   if (process.env['COLORTERM'] === 'truecolor' || process.env['COLORTERM'] === '24bit') {

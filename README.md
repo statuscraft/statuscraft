@@ -40,7 +40,7 @@ Drag bricks onto the baseplate, click one to recolor it, watch the live preview,
 - **Profiles** for different moods, which switch on by themselves in the repos or folders you choose.
 - **Per-project status lines** you can commit and share with your team.
 - **Share codes**: send a design as one line of text, and load it with one command.
-- **Safe install**: your old status line is saved, and `npx statuscraft uninstall` puts it back.
+- **Backed-up install**: existing Claude settings are backed up before setup, your old status line is saved, and `npx statuscraft uninstall` puts it back.
 
 ## Mods: change Claude Code itself
 
@@ -54,9 +54,9 @@ Press **🧩 Mods** at the top of the editor. You get a pretend Claude Code term
 | Under each answer | **Turn Summary**: time, tools and tokens |
 | Prompt hint | **Prompt Hint**, with `{branch}`, `{context}`, `{model}` and more |
 | Pop-up alerts | **Context Alert**, **Limit Alert**, **Done Alert** (a long answer is finished) |
-| Safety guards | **Danger Guard**: asks you before `rm -rf`, force pushes and `git reset --hard`. **Protected Files**: asks you before Claude changes `.env`, keys, lockfiles or `.git/`. Guards never say yes for you. |
+| Safety guards | **Danger Guard**: asks you before `rm -rf`, force pushes and `git reset --hard`. **Protected Files**: asks before Claude edits matching files using its file tools. Guards never say yes for you. |
 | Prompt shortcuts | **Prompt Shortcuts**: type `;tests` and it grows into a full prompt when you send it |
-| Slash commands | **Quick Command**: `/gs` runs `git status --short` at once, without asking Claude |
+| Slash commands | **Quick Command**: `/gs` runs `git status --short` after you review and approve that exact shell command |
 
 Mods need Claude Code 2.1.287 or newer. The first Apply adds the StatusCraft mod to Claude Code for you; after that, open sessions pick up your changes within a couple of seconds. Your mods live in `~/.config/statuscraft/mods.json`. From a terminal: `npx statuscraft mods`, `mods install` and `mods uninstall`.
 
@@ -101,14 +101,37 @@ The plugin is a [Claude Code mod](https://code.claude.com/docs/en/plugins/mods/o
 | `npx statuscraft presets` | Show every starter kit, drawn for real |
 | `npx statuscraft apply <preset \| code \| file>` | Use a preset, a share code (`sc1.…`) or a JSON file. Add `--profile <name>`, `--project` or `--local` |
 | `npx statuscraft profile` / `profile use <name>` | List profiles, or switch the default |
+| `npx statuscraft trust` | Review shell commands before enabling them; `--project`, `--mods` or `--revoke` |
 | `npx statuscraft doctor` | Find out why something does not show |
 | `npx statuscraft uninstall` | Put your previous status line back |
+
+## Backups and command safety
+
+Before first creating StatusCraft's config or changing Claude settings, setup backs up an existing `settings.json`. If the settings cannot be read or the backup cannot be written, setup stops. The first snapshot is `settings.json.before-statuscraft`; subsequent snapshots are kept in `settings.json.backups/`. Existing StatusCraft config, mods, project files and command approvals are also backed up before replacement, in `<filename>.backups/`, with a timestamp and unique name. Missing files have nothing to back up. Imported CCStatuskit settings are copied to `legacy-settings.json.backups/` inside the StatusCraft config folder before the new config is created; the legacy file and its folder are left untouched.
+
+Writes use temporary files and atomic replacement. StatusCraft operations lock the file while updating it, and reject detected concurrent edits. The editor refuses stale saves; reload it to pick up the newer version. Symlinked settings/config files are left untouched, with an error. Backups can contain secrets from your settings: keep them private and do not commit them.
+
+**Command widgets and Quick Command mods start disabled**, including commands in existing configs, imported share codes and project layouts. The local editor shows the exact commands and asks before enabling them. Cancel saves the design with unapproved commands disabled. From a terminal:
+
+```sh
+npx statuscraft trust                  # review commands in your global profiles
+npx statuscraft trust --project        # review this project's selected layout
+npx statuscraft trust --mods           # review Quick Command mods
+npx statuscraft trust --revoke         # revoke all command approvals
+```
+
+Approvals live in your user config, not inside shared designs. Project approvals apply only to that project's real folder. Changing the command text requires approval again. Global approvals apply across projects, with commands running in the current folder. Approving a command trusts its executable, scripts and inputs too: changing a script behind an unchanged command does not automatically revoke approval. Commands have your user permissions and run outside Claude Code's tool approval checks; only approve code you trust.
+
+Mods run inside Claude Code with your permissions. Danger Guard and Protected Files are reminders for supported tool calls, not a sandbox: they do not cover every destructive command, shell-based file edit or program a mod starts. Existing deny decisions are preserved; a failed enabled guard asks, or denies when it cannot verify the underlying decision. See [Anthropic's mod security guidance](https://code.claude.com/docs/en/plugins/mods/overview#what-a-mod-can-reach).
+
+To remove both integrations, run `npx statuscraft uninstall` and `npx statuscraft mods uninstall`. Your saved designs remain. If a mod disrupts a session, start `claude --safe-mode` and disable the plugin. If restoring settings from a backup, compare it with the current settings and restore only the entries you need, so later changes are preserved.
 
 ## Where things live
 
 | File | What it holds |
 | --- | --- |
 | `~/.config/statuscraft/config.json` | Your profiles and rules ([JSON schema](https://unpkg.com/statuscraft/schema.json)) |
+| `~/.config/statuscraft/trusted-commands.json` | Your exact shell-command approvals; never shared with a design |
 | `~/.config/statuscraft/mods.json` | The mods you placed in the editor |
 | `~/.config/statuscraft/bin/statuscraft-render.mjs` | The small program Claude Code runs to draw the line |
 | `.claude/statuscraft.json` | A project's design, shared with the team |

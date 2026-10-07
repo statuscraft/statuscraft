@@ -133,7 +133,7 @@ test('the Danger Guard never lifts a deny', async ($, on) => {
 
 test('a quick command runs its shell command and shows the output', async ($, on) => {
   const engine = stubEngine(on, {
-    files: { [MODS_FILE]: mods({ type: 'quick-command', options: { name: 'hello', command: 'echo hi', description: 'Say hi' } }) },
+    files: { [MODS_FILE]: mods({ type: 'quick-command', options: { name: 'hello', command: 'echo hi', description: 'Say hi' } }), '/home/you/.config/statuscraft/trusted-commands.json': JSON.stringify({ version: 1, approvals: [{ kind: 'quick-command', scope: 'global', command: 'echo hi' }] }) },
     run: (argv) => (argv[0] === 'sh' ? { exitCode: 0, stdout: 'hi\n', stderr: '' } : { exitCode: 1, stdout: '', stderr: '' }),
   })
 
@@ -153,7 +153,7 @@ test('a quick command runs its shell command and shows the output', async ($, on
 
 test('a failing quick command says how it exited', async ($, on) => {
   stubEngine(on, {
-    files: { [MODS_FILE]: mods({ type: 'quick-command', options: { name: 'boom', command: 'false' } }) },
+    files: { [MODS_FILE]: mods({ type: 'quick-command', options: { name: 'boom', command: 'false' } }), '/home/you/.config/statuscraft/trusted-commands.json': JSON.stringify({ version: 1, approvals: [{ kind: 'quick-command', scope: 'global', command: 'false' }] }) },
     run: () => ({ exitCode: 2, stdout: '', stderr: 'nope' }),
   })
   await $.session.start(SESSION)
@@ -242,4 +242,32 @@ test('{branch} reads the git branch, at most every ten seconds', async ($, on) =
   expect(engine.runs.length).toBe(1)
   await engine.clock.advance(2_000)
   expect(engine.runs.length).toBe(2)
+})
+
+
+test('quick commands need an exact approval and stop immediately after revocation', async ($, on) => {
+  const trustFile = '/home/you/.config/statuscraft/trusted-commands.json'
+  const engine = stubEngine(on, {
+    files: { [MODS_FILE]: mods({ type: 'quick-command', options: { name: 'hello', command: 'echo hi' } }) },
+    run: () => ({ exitCode: 0, stdout: 'hi', stderr: '' }),
+  })
+  await $.session.start(SESSION)
+  expect((await $.command.run({ command: 'hello', args: '' })).text).toContain('trust --mods')
+  expect(engine.runs.filter((r) => r.argv[0] === 'sh')).toHaveLength(0)
+  engine.write(trustFile, JSON.stringify({ version: 1, approvals: [{ kind: 'quick-command', scope: 'global', command: 'echo hi' }] }))
+  expect((await $.command.run({ command: 'hello', args: '' })).text).toBe('hi')
+  engine.write(trustFile, JSON.stringify({ version: 1, approvals: [] }))
+  expect((await $.command.run({ command: 'hello', args: '' })).text).toContain('disabled')
+  expect(engine.runs.filter((r) => r.argv[0] === 'sh')).toHaveLength(1)
+  engine.write(trustFile, '{ broken')
+  await $.command.run({ command: 'hello', args: '' })
+  expect(engine.runs.filter((r) => r.argv[0] === 'sh')).toHaveLength(1)
+})
+
+
+test('an enabled guard refuses a call if the permission decision fails', async ($, on) => {
+  stubEngine(on, { checkError: true, files: { [MODS_FILE]: mods({ type: 'danger-guard' }) } })
+  await $.session.start(SESSION)
+  const decision = await $.tool.check({ tool: 'Bash', input: { command: 'ls' } })
+  expect(decision.decision).toBe('deny')
 })

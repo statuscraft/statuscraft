@@ -21,6 +21,10 @@ export const paths = {
     return path.join(paths.configDir(), 'mods.json');
   },
 
+  commandTrustFile(): string {
+    return path.join(paths.configDir(), 'trusted-commands.json');
+  },
+
   // A local Claude Code marketplace that serves the StatusCraft mod
   marketplaceDir(): string {
     return path.join(paths.configDir(), 'marketplace');
@@ -32,6 +36,10 @@ export const paths = {
 
   previousStatusLineFile(): string {
     return path.join(paths.configDir(), 'previous-statusline.json');
+  },
+
+  legacyBackupBase(): string {
+    return path.join(paths.configDir(), 'legacy-settings.json');
   },
 
   legacyConfigFile(): string {

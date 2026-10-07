@@ -37,6 +37,7 @@ beforeEach(() => {
   // Never reach the real Claude Code from tests
   process.env['STATUSCRAFT_CLAUDE_BIN'] = path.join(sandbox, 'no-claude');
   delete process.env['STATUSCRAFT_PROFILE'];
+  vi.spyOn(paths, 'legacyConfigFile').mockReturnValue(path.join(sandbox, 'legacy.json'));
 });
 
 afterEach(() => {
@@ -119,6 +120,27 @@ describe('custom commands', () => {
     expect(alive(pid)).toBe(false);
   });
 
+  it.skipIf(process.platform !== 'win32')('stops the launched process tree on Windows when a command times out', async () => {
+    const pidFile = path.join(sandbox, 'child-pid');
+    const script = path.join(sandbox, 'command.cjs');
+    fs.writeFileSync(script, `const { spawn } = require('node:child_process');
+const fs = require('node:fs');
+const child = spawn(process.execPath, ['-e', 'setTimeout(() => {}, 30000)'], { stdio: 'ignore' });
+fs.writeFileSync(${JSON.stringify(pidFile)}, String(child.pid));
+setTimeout(() => {}, 30000);`);
+    let pid: number | undefined;
+    try {
+      const result = await runCommands([widget(`"${process.execPath}" "${script}"`, 1500)], { stdin: '{}' });
+      expect(result['cmd']).toBeNull();
+      pid = Number(fs.readFileSync(pidFile, 'utf8'));
+      const deadline = Date.now() + 2000;
+      while (alive(pid) && Date.now() < deadline) await new Promise((resolve) => setTimeout(resolve, 50));
+      expect(alive(pid)).toBe(false);
+    } finally {
+      if (pid && alive(pid)) process.kill(pid, 'SIGKILL');
+    }
+  });
+
   it.skipIf(process.platform === 'win32')('keeps the start of a long output', async () => {
     const result = await runCommands([widget('echo first; yes more | head -n 5000')], { stdin: '{}' });
     expect(result['cmd']?.split('\n')[0]).toBe('first');
@@ -165,7 +187,7 @@ describe('config store', () => {
     fs.mkdirSync(paths.configDir(), { recursive: true });
     fs.writeFileSync(paths.configFile(), '{ nope');
     const { backup } = saveConfig(loadConfig().config);
-    expect(backup).toMatch(/config\.json\.broken-/);
+    expect(backup).toContain("config.json.backups");
     expect(fs.readFileSync(backup!, 'utf8')).toBe('{ nope');
     expect(loadConfig().error).toBeUndefined();
     expect(saveConfig(loadConfig().config).backup).toBeUndefined();
@@ -396,7 +418,7 @@ describe('Claude Code settings', () => {
     writeClaudeSettings({ theme: 'dark', statusLine: other });
     expect(uninstall()).toEqual({ restored: false, notOurs: true });
     expect(JSON.parse(fs.readFileSync(paths.claudeSettingsFile(), 'utf8'))).toEqual({ theme: 'dark', statusLine: other });
-    expect(fs.existsSync(paths.previousStatusLineFile())).toBe(false);
+    expect(fs.existsSync(paths.previousStatusLineFile())).toBe(true);
   });
 
   it('refuses to touch a settings file it cannot read', () => {
@@ -469,7 +491,7 @@ describe('editor server', () => {
       const saved = await fetch(`${base}/api/config`, {
         method: 'PUT',
         headers: { 'content-type': 'application/json', 'x-statuscraft': '1' },
-        body: JSON.stringify({ config }),
+        body: JSON.stringify({ config, expectedRevision: state.data.configRevision }),
       });
       expect((await saved.json()).ok).toBe(true);
       expect(loadConfig().config.profiles['default']?.lines[0]?.[0]?.type).toBe('repo');
@@ -481,7 +503,7 @@ describe('editor server', () => {
       const state = await (await fetch(`${base}/api/mods`)).json();
       expect(state).toMatchObject({ ok: true, data: { exists: false, mods: { mods: [] }, plugin: { claude: { found: false }, installed: false } } });
       const write = (body: unknown) =>
-        fetch(`${base}/api/mods`, { method: 'PUT', headers: { 'content-type': 'application/json', 'x-statuscraft': '1' }, body: JSON.stringify(body) });
+        fetch(`${base}/api/mods`, { method: 'PUT', headers: { 'content-type': 'application/json', 'x-statuscraft': '1' }, body: JSON.stringify({ ...body as object, expectedRevision: state.data.revision }) });
       const saved = await (await write({ mods: { version: 1, mods: [{ id: 'm1', type: 'context-meter' }] } })).json();
       expect(saved).toEqual({ ok: true, data: { saved: true, path: paths.modsFile() } });
       expect(loadMods().mods.mods[0]).toMatchObject({ id: 'm1', type: 'context-meter', enabled: true });
