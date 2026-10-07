@@ -137,4 +137,4 @@ StatusCraft is MIT licensed and contributions are welcome. Adding a brick takes 
 
 ## Credits
 
-StatusCraft grew out of CCStatuskit and is inspired by [ccstatusline](https://github.com/sirmalloc/ccstatusline) by Matthew Breedlove. Thank you!
+StatusCraft grew out of CCStatuskit and is inspired by [ccstatusline](https://github.com/sirmalloc/ccstatusline) by Matthew Breedlove. Thank you! See [third-party notices](THIRD_PARTY_NOTICES.md) for the upstream license and attribution.

@@ -9,7 +9,8 @@
   "files": [
     "dist/",
     "schema.json",
-    "README.md"
+    "README.md",
+    "THIRD_PARTY_NOTICES.md"
   ],
   "scripts": {
     "build": "bun run scripts/build.ts",

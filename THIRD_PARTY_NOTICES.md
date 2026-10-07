@@ -1,6 +1,13 @@
+# Third-party notices
+
+Portions of this software are derived from ccstatusline
+(https://github.com/sirmalloc/ccstatusline): the Nord, Dracula, Catppuccin and
+Gruvbox powerline themes, and the format of the status line settings.
+ccstatusline is distributed under the following license:
+
 MIT License
 
-Copyright (c) 2026 StatusCraft contributors
+Copyright (c) 2025 Matthew Breedlove (https://github.com/sirmalloc)
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal

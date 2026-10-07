@@ -58,8 +58,10 @@ const schema = {
 };
 fs.writeFileSync(path.join(root, 'schema.json'), JSON.stringify(schema, null, 2) + '\n');
 
-// MIT asks for the license to travel with the code
-fs.copyFileSync(path.resolve(root, '../../LICENSE'), path.join(root, 'LICENSE'));
+// Ship the project license and upstream notices with the code.
+for (const file of ['LICENSE', 'THIRD_PARTY_NOTICES.md']) {
+  fs.copyFileSync(path.resolve(root, '../..', file), path.join(root, file));
+}
 
 // npm shows the package README; point its images and links at GitHub
 const readme = fs.readFileSync(path.resolve(root, '../../README.md'), 'utf8');

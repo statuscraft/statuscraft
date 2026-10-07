@@ -7,6 +7,7 @@ dist/
 packages/cli/schema.json
 packages/cli/README.md
 packages/cli/LICENSE
+packages/cli/THIRD_PARTY_NOTICES.md
 
 # Files Claude Code writes beside a loaded mod
 packages/plugin/.claude-plugin/types/
